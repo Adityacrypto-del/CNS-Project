@@ -35,6 +35,11 @@ from .crypto_utils import (IntegrityError, b64d, canonical_json, load_public_key
 OFFLINE_COMMANDS = {"verify-export"}
 
 
+
+def _csv_safe(value):
+    """Neutralise spreadsheet formulas (CSV injection), e.g. a student named "=HYPERLINK(...)"."""
+    return f"'{value}" if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
+
 def parse_time(value, now: int | None = None) -> int:
     """Accept epoch seconds, 'now', relative '+30m' / '+3h' / '+2d', or ISO-8601 local time."""
     now = now or int(time.time())
@@ -193,7 +198,7 @@ class AdminCommands:
             with open(a.csv, "w", newline="") as fh:
                 w = csv.DictWriter(fh, fieldnames=list(rows[0]) if rows else ["student_id"])
                 w.writeheader()
-                w.writerows(rows)
+                w.writerows({k: _csv_safe(v) for k, v in r.items()} for r in rows)
             print(f"[✓] CSV written to {a.csv} (unsigned convenience copy)")
 
     # --- audit / keys ----------------------------------------------------------------

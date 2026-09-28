@@ -456,7 +456,7 @@ class ExamService:
         # The answer key is deliberately not revealed.
         result = {"student_id": sid, "exam_id": exam_id, "score": record["score"],
                   "total": record["total"],
-                  "percentage": round(100 * record["score"] / record["total"], 2),
+                  "percentage": f"{100 * record['score'] / record['total']:.2f}",
                   "submission_hash": record["submission_hash"], "issued_at": int(time.time())}
         self.audit.record("RESULT_ISSUED", user=sid, exam_id=exam_id)
         return {"result": self._signed(result)}
@@ -675,7 +675,7 @@ class ExamService:
         if exam is None:
             raise ServiceError("NO_SUCH_EXAM")
         rows = [{"student_id": sid, "name": students[sid]["name"], "score": r["score"],
-                 "total": r["total"], "percentage": round(100 * r["score"] / r["total"], 2),
+                 "total": r["total"], "percentage": f"{100 * r['score'] / r['total']:.2f}",
                  "submission_hash": r["submission_hash"], "received_at": r["received_at"]}
                 for sid, r in sorted(bucket["submissions"].items())]
         absent = sorted(sid for sid, s in students.items()

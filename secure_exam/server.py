@@ -122,7 +122,9 @@ def main() -> None:
     parser.add_argument("--host", default=config.HOST)
     parser.add_argument("--port", type=int, default=config.PORT, help="TLS socket port")
     parser.add_argument("--api-port", type=int, default=config.API_PORT, help="HTTPS API port")
+    parser.add_argument("--web-port", type=int, default=config.WEB_PORT, help="web frontend port")
     parser.add_argument("--no-api", action="store_true", help="do not start the HTTPS API")
+    parser.add_argument("--no-web", action="store_true", help="do not serve the web frontend")
     args = parser.parse_args()
     if not config.SERVER_SIGN_KEY.exists():
         raise SystemExit("System not initialised. Run: python -m secure_exam.init_system")
@@ -132,12 +134,17 @@ def main() -> None:
     socket_server = ExamServer(args.host, args.port, service)
     socket_server.start()
     print(f"[*] TLS socket server  on {args.host}:{socket_server.port}")
-    api = None
+    api = web = None
     if not args.no_api:
         from .api import ApiServer
         api = ApiServer(args.host, args.api_port, service)
         api.start()
         print(f"[*] HTTPS JSON API     on https://{config.SERVER_HOSTNAME}:{api.port}/api/v1")
+        if not args.no_web:
+            from .web import WebServer
+            web = WebServer(args.host, args.web_port, api.port)
+            web.start()
+            print(f"[*] Web frontend       on {web.url}")
     print("[*] Ctrl+C to stop")
     try:
         threading.Event().wait()
@@ -147,6 +154,8 @@ def main() -> None:
         socket_server.stop()
         if api:
             api.stop()
+        if web:
+            web.stop()
 
 
 if __name__ == "__main__":

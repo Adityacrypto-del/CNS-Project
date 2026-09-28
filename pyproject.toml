@@ -17,6 +17,7 @@ secure-exam-client = "secure_exam.client:main"
 secure-exam-admin = "secure_exam.admin:main"
 secure-exam-attacks = "secure_exam.attacks:main"
 secure-exam-evaluate = "secure_exam.evaluate:main"
+secure-exam-web = "secure_exam.web:main"
 
 [tool.setuptools]
 packages = ["secure_exam"]

@@ -2,10 +2,12 @@
 
 A client–server examination system. Examiners register students, create and publish exams, and release results. Students enroll, sit timed exams, submit signed answers and receive signed results. Every step is protected with **AES**, **RSA**, **SHA-256**, **HMAC**, **digital signatures** and **TLS 1.3**.
 
-The system is written in Python. Its only dependency is [`cryptography`](https://cryptography.io); everything else is in the standard library. There are two transports over one backend:
+The server is written in Python. Its only dependency is [`cryptography`](https://cryptography.io); everything else is in the standard library. There are two transports over one backend:
 
 - a TLS socket protocol, used by the command-line clients
-- an **HTTPS JSON API** for a web frontend (see [docs/API.md](docs/API.md))
+- an **HTTPS JSON API** (see [docs/API.md](docs/API.md)), used by the **web frontend** in [frontend/](frontend/)
+
+The web frontend is plain JavaScript modules with no build step and no third-party code. All cryptography runs in the browser through WebCrypto. Keys are generated on the device, answers are signed there, and every server signature is checked against a pinned key.
 
 ---
 
@@ -17,17 +19,45 @@ pip install -r requirements.txt          # or: pip install -e .  (adds secure-ex
 # 1. Create the CA, certificates, server keys, encrypted databases and demo data
 python -m secure_exam.init_system
 
-# 2. Start the server: TLS socket on :8443 and HTTPS API on :8444 (terminal 1)
+# 2. Start the server (terminal 1): TLS socket on :8443, HTTPS API on :8444, web app on :5173
 python -m secure_exam.server
 
-# 3a. Student client (terminal 2)
+# 3. Web app: open https://localhost:5173 (see "Web frontend" below about the certificate)
+
+# 4a. Student CLI (terminal 2)
 python -m secure_exam.client                     # log in, sit exams, view results
 python -m secure_exam.client --transport https   # same thing over the HTTPS API
 
-# 3b. Examiner tool (terminal 3)
+# 4b. Examiner CLI (terminal 3)
 python -m secure_exam.admin exams list
 python -m secure_exam.admin shell                # interactive examiner session
 ```
+
+### Web frontend
+
+The server serves the app at **https://localhost:5173** alongside the API. The system uses its own private CA, so the browser must trust it for both ports. Either:
+
+- import `data/pki/ca_cert.pem` as a trusted root (Keychain Access on macOS, `certmgr` on Windows, or the browser's certificate settings), or
+- open https://localhost:8444/api/v1/health and https://localhost:5173 once each, and accept the warning.
+
+Screens:
+
+| Role | Screens |
+|---|---|
+| Anyone | Sign in · Activate account · Verify a receipt, result or export file offline |
+| Student | My exams · Timed exam with autosave and auto-submit · Signed receipt · Signed result |
+| Examiner | Exams (publish, close, release) · Exam builder · Submissions with in-browser signature checks · Signed JSON/CSV export · Students (add, reissue, disable, unlock) · Audit log · Storage-key rotation |
+| Both | Account: import, back up or remove the signing key, change password |
+
+How the browser client is protected:
+
+- **Pinned server key.** `/config.js` carries the server's RSA public key. The handshake transcript, papers, receipts, results and exports are all verified against it, so a forged server or a MITM inside TLS is rejected.
+- **Same channel as the CLI.** RSA-OAEP key transport, HKDF, then AES-256-CBC + HMAC-SHA256 envelopes with sequence numbers and a freshness window.
+- **Keys stay on the device.** Keys are generated in the browser at activation and stored in IndexedDB only as encrypted PKCS#8 (PBKDF2 at 600 000 rounds, then AES-256). Once unlocked, a key lives in memory as a non-extractable `CryptoKey`. Key files from the CLI can be imported, and browser key files work with the CLI.
+- **Strict page security.** Content-Security-Policy with no inline script or style and `connect-src` limited to the API. The page also sends HSTS, `frame-ancestors 'none'`, `no-referrer` and `nosniff`. The page never uses `innerHTML`, so server data cannot inject markup.
+- **Per-tab sessions.** Session keys are kept in `sessionStorage`, so a reload resumes the session but closing the tab ends it.
+
+To serve the app separately, use `python -m secure_exam.server --no-web` plus `python -m secure_exam.web`. The app must be served from the origin in `SECURE_EXAM_ALLOWED_ORIGIN`.
 
 ### Demo data
 
@@ -85,8 +115,10 @@ python -m secure_exam.admin students reissue S1001   # lost key: revoke and issu
 ```bash
 python -m secure_exam.attacks      # 40 attack simulations against both transports
 python -m secure_exam.evaluate     # full evaluation; writes reports/security_evaluation.md
-python -W error::ResourceWarning -m unittest discover -s tests -t . -v    # 60 tests
+python -W error::ResourceWarning -m unittest discover -s tests -t . -v    # 64 tests
 ```
+
+The suite includes [tests/test_web_client.py](tests/test_web_client.py). It checks the web server's headers and path handling, and runs the browser modules under Node ([tests/web_client_test.mjs](tests/web_client_test.mjs)) against a live server. That run shows the WebCrypto code interoperates byte for byte with Python: keys, handshake, envelopes, signatures and receipts. The Node part is skipped when Node 20+ is not installed.
 
 Attacks and evaluation run in a **temporary sandbox**: fresh keys and databases, with both servers on random ports. Your `data/` directory is never touched.
 
@@ -95,7 +127,7 @@ Attacks and evaluation run in a **temporary sandbox**: fresh keys and databases,
 ## Architecture
 
 ```
-┌──────── Student / examiner client ─────────┐            ┌──────────────── Exam server ─────────────────┐
+┌─── Student / examiner client (CLI or web) ──┐            ┌──────────────── Exam server ─────────────────┐
 │ • trusts the system CA (TLS)                │  TLS 1.3   │ server.py  TLS socket transport   :8443      │
 │ • pins the server's RSA public key          │◄──────────►│ api.py     HTTPS JSON API         :8444      │
 │ • own RSA key, encrypted with the password  │            │      └──► service.py (roles, exams, grading) │
@@ -201,14 +233,23 @@ secure_exam/
   service.py       business logic shared by both transports: roles, enrollment, exams, grading
   server.py        TLS socket transport + entry point that starts both transports
   api.py           HTTPS JSON API for web frontends
+  web.py           static HTTPS server for the web app (CSP, HSTS, pinned-key /config.js)
   client.py        ExamClient library (socket or HTTPS) + student CLI + receipt verifier
   admin.py         examiner CLI (signed actions, submission verification, signed exports)
   init_system.py   one-time setup + demo data
   attacks.py       attack simulations
   evaluate.py      security evaluation and report generator
+frontend/          web app (no build step): index.html, css/app.css, js/
+  js/crypto.js     WebCrypto: RSA-OAEP/PSS, AES-CBC, HMAC, HKDF, PBKDF2, encrypted PKCS#8, canonical JSON
+  js/channel.js    SecureSession: handshake + encrypted, MAC'd, sequenced envelopes
+  js/client.js     ExamClient: verified papers, signed submissions, receipts, results, admin actions
+  js/keystore.js   IndexedDB storage for encrypted keys and receipts
+  js/app.js        routing, sign-in, activation, account, file verification
+  js/student.js    exam list, timed exam, receipt and result screens
+  js/admin.js      examiner console: exams, builder, submissions, students, audit, system
 docs/API.md        protocol and API reference for frontend developers
 examples/          sample exam definition for `admin exams create`
-tests/             unittest suite (primitives, channel, validation, lifecycle, all attacks)
+tests/             unittest suite (primitives, channel, validation, lifecycle, all attacks, web client)
 data/              generated at runtime (git-ignored): keys, certs, encrypted DBs, audit log
 reports/           generated evaluation report
 ```
@@ -223,6 +264,7 @@ Environment variables:
 | `SECURE_EXAM_HOST` | `127.0.0.1` | Bind / connect address |
 | `SECURE_EXAM_PORT` | `8443` | TLS socket port |
 | `SECURE_EXAM_API_PORT` | `8444` | HTTPS API port |
+| `SECURE_EXAM_WEB_PORT` | `5173` | Web frontend port |
 | `SECURE_EXAM_ALLOWED_ORIGIN` | `https://localhost:5173` | Only origin allowed by CORS (the web frontend) |
 
 Security parameters live in [config.py](secure_exam/config.py): `PBKDF2_ITERATIONS`, `MAX_CLOCK_SKEW`, `MAX_FAILED_LOGINS`, `LOCKOUT_SECONDS`, `SESSION_TTL`, `API_SESSION_IDLE`, `ENROLLMENT_CODE_TTL`, `SUBMISSION_GRACE_SECONDS`, `PASSWORD_MIN_LENGTH`, and the RSA key sizes.
@@ -234,4 +276,5 @@ Security parameters live in [config.py](secure_exam/config.py): `PBKDF2_ITERATIO
 - Each database is a single encrypted JSON file, rewritten on every change. That is fine for a class or department; a larger deployment needs a real database with per-record encryption.
 - Enrollment codes are shown to the examiner, who delivers them out of band; the system does not send e-mail.
 - Students authenticate with a password plus a device-bound signing key. A real deployment would add MFA and proctoring.
+- In the web app, the page's JavaScript comes from the server being verified, so a fully compromised server could serve altered code. The CLI clients don't share this weakness. The CSP, pinned key and same-origin serving make tampering in transit or by injection hard, but they cannot protect against the server itself.
 - Exams are multiple choice and auto-graded. The answer key is never sent to clients, even with results.

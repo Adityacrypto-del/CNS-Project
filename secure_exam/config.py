@@ -34,9 +34,10 @@ CLIENT_DIR = DATA_DIR / "clients"
 HOST = os.environ.get("SECURE_EXAM_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SECURE_EXAM_PORT", 8443))           # TLS socket protocol
 API_PORT = int(os.environ.get("SECURE_EXAM_API_PORT", 8444))   # HTTPS JSON API (for web frontends)
+WEB_PORT = int(os.environ.get("SECURE_EXAM_WEB_PORT", 5173))   # HTTPS web frontend (static files)
 SERVER_HOSTNAME = "localhost"      # must match the TLS certificate SAN
 # Origin allowed to call the HTTPS API from a browser (CORS). Empty = same-origin only.
-API_ALLOWED_ORIGIN = os.environ.get("SECURE_EXAM_ALLOWED_ORIGIN", "https://localhost:5173")
+API_ALLOWED_ORIGIN = os.environ.get("SECURE_EXAM_ALLOWED_ORIGIN", f"https://{SERVER_HOSTNAME}:{WEB_PORT}")
 
 # --- Security parameters ---------------------------------------------------
 PBKDF2_ITERATIONS = 600_000        # OWASP 2023 recommendation for PBKDF2-HMAC-SHA256

@@ -1,6 +1,6 @@
 # Security Evaluation Report
 
-Generated 2026-09-28 16:42:19 by `python -m secure_exam.evaluate` against a fresh sandbox (new keys and databases).
+Generated 2026-09-28 17:15:14 by `python -m secure_exam.evaluate` against a fresh sandbox (new keys and databases).
 
 ## 1. End-to-end examination flow
 
@@ -34,7 +34,7 @@ Generated 2026-09-28 16:42:19 by `python -m secure_exam.evaluate` against a fres
 | Integrity | SHA-256 KAT: SHA256('abc') | ✅ |
 | Integrity | HMAC-SHA256 KAT: RFC 4231 case 1 | ✅ |
 | Key management | HKDF-SHA256 KAT: RFC 5869 case 1 | ✅ |
-| Integrity | SHA-256 avalanche: 1-bit input change flips 50.2% of output bits | ✅ |
+| Integrity | SHA-256 avalanche: 1-bit input change flips 50.0% of output bits | ✅ |
 | Integrity | HMAC differs under a different key | ✅ |
 | Confidentiality | AES-256-CBC encrypt/decrypt round-trip | ✅ |
 | Confidentiality | AES-256-CBC randomised IV: same plaintext -> different ciphertext | ✅ |
@@ -153,19 +153,19 @@ Audit log: 119 hash-chained, HMAC-protected entries verified.
 
 | Operation | Median time |
 |---|---|
-| AES-256-CBC encrypt (1 MiB) | 0.55 ms  (1809 MiB/s) |
-| AES-256-GCM encrypt (1 MiB) | 0.14 ms  (7205 MiB/s) |
+| AES-256-CBC encrypt (1 MiB) | 0.54 ms  (1840 MiB/s) |
+| AES-256-GCM encrypt (1 MiB) | 0.14 ms  (7225 MiB/s) |
 | SHA-256 (1 MiB) | 0.31 ms |
 | HMAC-SHA256 (1 MiB) | 0.31 ms |
 | RSA-3072 PSS sign | 0.90 ms |
 | RSA-3072 PSS verify | 0.030 ms |
 | RSA-3072 OAEP unwrap | 0.91 ms |
-| RSA-2048 key generation (student enrollment) | 29 ms |
-| PBKDF2-SHA256 (600,000 iter) | 37 ms  (~26.9 guesses/s per core for an attacker) |
+| RSA-2048 key generation (student enrollment) | 24 ms |
+| PBKDF2-SHA256 (600,000 iter) | 37 ms  (~27.1 guesses/s per core for an attacker) |
 | TLS 1.3 + RSA handshake (socket) | 3.6 ms |
 | Connect + login + fetch & verify paper (socket) | 42 ms |
-| TLS 1.3 + RSA handshake (https) | 3.7 ms |
-| Connect + login + fetch & verify paper (https) | 43 ms |
+| TLS 1.3 + RSA handshake (https) | 3.6 ms |
+| Connect + login + fetch & verify paper (https) | 42 ms |
 
 ## Summary
 

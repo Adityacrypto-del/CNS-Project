@@ -2,7 +2,12 @@
 
 This guide is for anyone building a web (or other) client for the exam server. It covers the HTTPS transport, how to set up the encrypted session in the browser with WebCrypto, and every operation with its request, response and error codes.
 
-The Python client in [`secure_exam/client.py`](../secure_exam/client.py) is the reference implementation. When in doubt, match what it sends byte for byte.
+There are two reference implementations; when in doubt, match what they send byte for byte:
+
+- the Python client in [`secure_exam/client.py`](../secure_exam/client.py)
+- the bundled web frontend in [`frontend/js/`](../frontend/js/): [`crypto.js`](../frontend/js/crypto.js) (WebCrypto primitives, canonical JSON, encrypted PKCS#8), [`channel.js`](../frontend/js/channel.js) (handshake and envelopes) and [`client.js`](../frontend/js/client.js) (every operation, with signature checks)
+
+Both are tested against the live server in [`tests/test_web_client.py`](../tests/test_web_client.py).
 
 ---
 
@@ -14,6 +19,7 @@ The server offers two transports that share one protocol and one backend:
 |---|---|---|
 | TLS socket, 4-byte big-endian length-prefixed JSON frames | `8443` (`SECURE_EXAM_PORT`) | Python CLI clients |
 | HTTPS JSON API | `8444` (`SECURE_EXAM_API_PORT`) | Web frontends |
+| Static HTTPS (web app) | `5173` (`SECURE_EXAM_WEB_PORT`) | Serves `frontend/` and `/config.js` |
 
 TLS alone is not trusted to protect exam content. Inside TLS, the client and server run their own handshake and derive session keys. After that, every operation travels as an encrypted, MAC-protected **envelope** through a single endpoint, `POST /api/v1/rpc`. URLs and status codes therefore reveal nothing about what the user is doing.
 
@@ -62,7 +68,7 @@ These must match exactly, because hashes and signatures are computed over them.
   - object keys sorted recursively, by code point
   - no whitespace
   - **every character from U+007F upward escaped** as `\uXXXX` (lowercase hex, UTF-16 surrogate pairs), because Python's `ensure_ascii` defaults to true. The snippet below is verified byte-identical to the Python encoder.
-  - only strings, integers, booleans, `null`, arrays and objects appear; the protocol never uses floats in signed data, except `percentage` in results, which the client only verifies and never re-serialises
+  - only strings, integers, booleans, `null`, arrays and objects appear. The protocol **never uses floats** (JS and Python print `80.0` differently), so, for example, `percentage` is the string `"80.00"`
 
   ```js
   function canonicalJson(v) {
@@ -75,7 +81,6 @@ These must match exactly, because hashes and signatures are computed over them.
   const utf8 = s => new TextEncoder().encode(s);
   ```
 
-  Floats are the one caveat. For signatures you *verify*, re-serialise the `body` exactly as received. Python writes `66.67` and JS writes `66.67`, so this works for the values the server produces.
 
 ---
 
@@ -94,7 +99,7 @@ These must match exactly, because hashes and signatures are computed over them.
 
 ### Pin the server key
 
-The server's RSA public key (`data/pki/server_sign_pub.pem`) must be **bundled with the frontend at build time**. Compare it with `GET /info` as a sanity check, but never trust `/info` alone: whoever controls the network response would control the key.
+The server's RSA public key (`data/pki/server_sign_pub.pem`) must be **bundled with the frontend at build time**. The bundled frontend receives it from `/config.js`, which [`web.py`](../secure_exam/web.py) generates from the same origin as the page; it never reads the key from the API. Compare it with `GET /info` as a sanity check, but never trust `/info` alone: whoever controls the network response would control the key.
 
 ### Handshake
 
