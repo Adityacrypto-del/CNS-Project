@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 2%;
+    --foreground: 45 16% 65%;
+  }
+}
+
+body {
+  background-color: #050505;
+  color: #b6b095;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
