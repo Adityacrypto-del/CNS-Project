@@ -122,6 +122,22 @@ The suite includes [tests/test_web_client.py](tests/test_web_client.py). It chec
 
 Attacks and evaluation run in a **temporary sandbox**: fresh keys and databases, with both servers on random ports. Your `data/` directory is never touched.
 
+### Landing page (React)
+
+The project also has a React + Vite landing page at the repository root: `src/`, `index.html` and `vite.config.ts`. It introduces the system and links to the exam web app. It performs no cryptography and needs Node 18+.
+
+```bash
+npm install
+npm run dev          # http://localhost:3000
+npm run build        # type-checks, then writes dist/
+```
+
+The page checks the API's health through the Vite proxy. The proxy verifies the server certificate against `data/pki/ca_cert.pem`. If the exam server runs on non-default ports, point the page at them:
+
+```bash
+VITE_WEB_APP_URL=https://localhost:8445 VITE_API_URL=https://localhost:8444 npm run dev
+```
+
 ---
 
 ## Architecture

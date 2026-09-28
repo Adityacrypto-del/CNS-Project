@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react"
 import LycorisSpecimen from "@/components/ui/lycoris-specimen"
+import { WEB_APP_URL, WEB_APP_PORT, API_URL, API_PORT } from "@/lib/links"
 import { ShieldCheck, Lock, Key, Cpu, Sparkles, Terminal, ArrowUpRight, CheckCircle2, UserCheck, Play, RefreshCw } from "lucide-react"
 
 export default function App() {
@@ -10,8 +11,9 @@ export default function App() {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null)
 
   useEffect(() => {
-    // Check local API health endpoint
-    fetch("https://localhost:8444/api/v1/health")
+    // Check the API health endpoint through the Vite proxy (see vite.config.ts); the API
+    // itself only allows CORS from the exam web app, not from this page.
+    fetch("/api/v1/health")
       .then((res) => (res.ok ? setApiOnline(true) : setApiOnline(false)))
       .catch(() => setApiOnline(false))
   }, [])
@@ -65,7 +67,7 @@ export default function App() {
             </span>
           </div>
           <a
-            href="https://localhost:5173"
+            href={WEB_APP_URL}
             target="_blank"
             rel="noreferrer"
             className="px-4 py-1.5 rounded-full bg-[#e3131b] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#c10d14] transition-all flex items-center gap-1.5 shadow-lg shadow-[#e3131b]/20"
@@ -167,8 +169,8 @@ export default function App() {
           ligatureWord="Affluent"
           multilingual="Sê·cû·rê·Ex·äm"
           links={[
-            { label: "WEB APP (PORT 5173)", href: "https://localhost:5173" },
-            { label: "HTTPS API (PORT 8444)", href: "https://localhost:8444/api/v1/health" },
+            { label: `WEB APP (PORT ${WEB_APP_PORT})`, href: WEB_APP_URL },
+            { label: `HTTPS API (PORT ${API_PORT})`, href: `${API_URL}/api/v1/health` },
           ]}
         />
       </section>
@@ -264,7 +266,7 @@ export default function App() {
               </div>
 
               <a
-                href="https://localhost:5173"
+                href={WEB_APP_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-mono text-xs uppercase tracking-wider text-center block transition-all border border-white/10"
@@ -301,7 +303,7 @@ export default function App() {
               </div>
 
               <a
-                href="https://localhost:5173"
+                href={WEB_APP_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-3 rounded-xl bg-[#e3131b] hover:bg-[#c10d14] text-white font-mono text-xs uppercase tracking-wider text-center block transition-all shadow-lg shadow-[#e3131b]/20"
@@ -349,8 +351,8 @@ export default function App() {
             <pre className="text-gray-300 leading-relaxed">
 <span className="text-[#e3131b]">$</span> python3 -m secure_exam.server{"\n"}
 <span className="text-gray-500">[*] TLS socket server  on 127.0.0.1:8443</span>{"\n"}
-<span className="text-gray-500">[*] HTTPS JSON API     on https://localhost:8444/api/v1</span>{"\n"}
-<span className="text-gray-500">[*] Web frontend       on https://localhost:5173/</span>{"\n\n"}
+<span className="text-gray-500">[*] HTTPS JSON API     on {API_URL}/api/v1</span>{"\n"}
+<span className="text-gray-500">[*] Web frontend       on {WEB_APP_URL}/</span>{"\n\n"}
 <span className="text-[#e3131b]">$</span> python3 -m secure_exam.client --transport https{"\n"}
 <span className="text-emerald-400">[+] Authenticated S1001 (Alice Kumar)</span>{"\n"}
 <span className="text-emerald-400">[+] Signature Verified: RSA-PSS 3072-bit</span>
