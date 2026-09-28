@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+# Generated keys, certificates and encrypted databases - never commit private keys.
+data/

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secure-exam"
+version = "2.0.0"
+description = "Secure online examination system using AES, RSA, SHA-256, HMAC, digital signatures and TLS 1.3"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["cryptography>=42"]
+
+[project.scripts]
+secure-exam-init = "secure_exam.init_system:main"
+secure-exam-server = "secure_exam.server:main"
+secure-exam-client = "secure_exam.client:main"
+secure-exam-admin = "secure_exam.admin:main"
+secure-exam-attacks = "secure_exam.attacks:main"
+secure-exam-evaluate = "secure_exam.evaluate:main"
+
+[tool.setuptools]
+packages = ["secure_exam"]

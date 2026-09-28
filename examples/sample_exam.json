@@ -1,0 +1,20 @@
+{
+  "exam": {
+    "exam_id": "CNS-QUIZ-2",
+    "title": "Quiz 2 - Public-key cryptography",
+    "description": "15 minutes. Each question carries 1 mark unless stated.",
+    "duration_minutes": 15,
+    "opens_at": "now",
+    "closes_at": "+2d",
+    "questions": [
+      {"id": "Q1", "text": "RSA security relies on the difficulty of:",
+       "options": {"A": "Discrete logarithms", "B": "Integer factorisation", "C": "Hash collisions", "D": "Lattice problems"}},
+      {"id": "Q2", "text": "Why is PSS padding preferred over PKCS#1 v1.5 for signatures?",
+       "options": {"A": "It is faster", "B": "It has a security proof and is randomised", "C": "It produces shorter signatures", "D": "It needs no hash"},
+       "marks": 2},
+      {"id": "Q3", "text": "A certificate authority's main role is to:",
+       "options": {"A": "Encrypt traffic", "B": "Bind public keys to identities", "C": "Store passwords", "D": "Generate session keys"}}
+    ]
+  },
+  "answer_key": {"Q1": "B", "Q2": "B", "Q3": "B"}
+}
