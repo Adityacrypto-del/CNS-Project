@@ -11,6 +11,41 @@ The web frontend is plain JavaScript modules with no build step and no third-par
 
 ---
 
+## Screenshots
+
+The React landing page (`npm run dev`, http://localhost:3000), which links to the exam app:
+
+<img src="docs/screenshots/landing-page.png" alt="Landing page">
+
+The secure exam web app (https://localhost:5173), served by the Python server:
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="docs/screenshots/login.png" alt="Sign in"><br><b>Sign in</b>: students and examiners sign in over TLS 1.3 plus an inner AES-256 + HMAC session.</td>
+<td width="50%" valign="top"><img src="docs/screenshots/student-exams.png" alt="My exams"><br><b>My exams</b>: the exams open to the student. Each can be attempted once.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/screenshots/exam.png" alt="Timed exam"><br><b>Timed exam</b>: the paper's server signature is checked before it is shown. Answers autosave, and the exam auto-submits when time runs out.</td>
+<td width="50%" valign="top"><img src="docs/screenshots/receipt.png" alt="Signed receipt"><br><b>Signed receipt</b>: the server signs a receipt over the SHA-256 hash of the exact answers.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/screenshots/result.png" alt="Signed result"><br><b>Signed result</b>: the RSA-PSS signature on the result is checked in the browser and tied to the student's receipt.</td>
+<td width="50%" valign="top"><img src="docs/screenshots/connection-security.png" alt="Connection security"><br><b>Connection security</b>: live session details: pinned server key, sequence numbers, clock offset, key state.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/screenshots/examiner-exams.png" alt="Examiner console"><br><b>Examiner console</b>: publish, close and release exams. Every change is an RSA-signed admin action.</td>
+<td width="50%" valign="top"><img src="docs/screenshots/exam-builder.png" alt="Exam builder"><br><b>Exam builder</b>: the paper and its answer key are stored encrypted. Only the paper is sent to students.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/screenshots/verify-submission.png" alt="Non-repudiation check"><br><b>Non-repudiation check</b>: the examiner's browser checks the student's signature, independently of the server.</td>
+<td width="50%" valign="top"><img src="docs/screenshots/audit-log.png" alt="Audit log"><br><b>Audit log</b>: a hash-chained, HMAC-protected log, verified on every view.</td>
+</tr>
+</table>
+
+<p align="center"><img src="docs/screenshots/mobile.png" alt="Mobile layout" width="300"><br><b>Mobile</b>: every screen also works at phone width.</p>
+
+---
+
 ## Quick start
 
 ```bash
@@ -23,6 +58,7 @@ python -m secure_exam.init_system
 python -m secure_exam.server
 
 # 3. Web app: open https://localhost:5173 (see "Web frontend" below about the certificate)
+#    Optional landing page: npm install && npm run dev, then open http://localhost:3000
 
 # 4a. Student CLI (terminal 2)
 python -m secure_exam.client                     # log in, sit exams, view results
@@ -35,10 +71,15 @@ python -m secure_exam.admin shell                # interactive examiner session
 
 ### Web frontend
 
-The server serves the app at **https://localhost:5173** alongside the API. The system uses its own private CA, so the browser must trust it for both ports. Either:
+The server serves the app at **https://localhost:5173** alongside the API. The certificates come from the project's own CA ("Secure Exam Root CA", created by `init_system`). Until the browser trusts that CA, it shows *"Your connection is not private"*. Either:
 
-- import `data/pki/ca_cert.pem` as a trusted root (Keychain Access on macOS, `certmgr` on Windows, or the browser's certificate settings), or
-- open https://localhost:8444/api/v1/health and https://localhost:5173 once each, and accept the warning.
+- **Trust the CA (recommended).** This gives a real padlock on both ports.
+  - macOS: `security add-trusted-cert -r trustRoot -k ~/Library/Keychains/login.keychain-db data/pki/ca_cert.pem`. Enter your Mac password, then quit Chrome with Cmd+Q and reopen it.
+  - Windows: `certutil -user -addstore Root data\pki\ca_cert.pem`.
+  - Firefox: Settings → Privacy & Security → View Certificates → Authorities → Import.
+- **Or accept the warning once per port.** Open https://localhost:8444/api/v1/health and https://localhost:5173, then choose Advanced → Proceed. Do the API first, or sign-in fails with a network error.
+
+Remove the trust when you are done. On macOS: `security delete-certificate -c "Secure Exam Root CA" ~/Library/Keychains/login.keychain-db`. Running `init_system --force` creates a new CA, which must be trusted again. Keep `data/pki/ca_key.pem` private: anyone holding it can issue certificates your browser trusts.
 
 Screens:
 
@@ -124,7 +165,7 @@ Attacks and evaluation run in a **temporary sandbox**: fresh keys and databases,
 
 ### Landing page (React)
 
-The project also has a React + Vite landing page at the repository root: `src/`, `index.html` and `vite.config.ts`. It introduces the system and links to the exam web app. It performs no cryptography and needs Node 18+.
+The project also has a React + Vite landing page at the repository root: `src/`, `index.html` and `vite.config.ts`. It introduces the system and links to the exam web app, as shown in [Screenshots](#screenshots). It performs no cryptography and needs Node 18+.
 
 ```bash
 npm install
@@ -264,6 +305,9 @@ frontend/          web app (no build step): index.html, css/app.css, js/
   js/student.js    exam list, timed exam, receipt and result screens
   js/admin.js      examiner console: exams, builder, submissions, students, audit, system
 docs/API.md        protocol and API reference for frontend developers
+docs/screenshots/  UI screenshots used in this README
+src/               React + Vite landing page (App.tsx, lycoris-specimen WebGL visual, lib/links.ts)
+index.html, vite.config.ts, package.json   landing page entry, dev server + health proxy, npm deps
 examples/          sample exam definition for `admin exams create`
 tests/             unittest suite (primitives, channel, validation, lifecycle, all attacks, web client)
 data/              generated at runtime (git-ignored): keys, certs, encrypted DBs, audit log
